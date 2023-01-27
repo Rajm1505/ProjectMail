@@ -20,4 +20,7 @@ from . import views
 urlpatterns = [
     path('', views.index),
     path('sendmail/', views.sendMail),
+    path('mailreplies/', views.allMailReplies),
+    path('mailreplies/new', views.newMailReplies),
+    path('mailbody/', views.mailBody),
 ]

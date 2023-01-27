@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'requests',
+    'django_celery_results'
 ]
 
 MIDDLEWARE = [
@@ -90,12 +91,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'projectmail',
-        'USERNAME': 'root',
+        'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
         'PORT': config('PORT'),
-    }
+    },
 }
+
 
 # DATABASES = {
 #     'default': {
@@ -152,11 +154,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 EMAIL_HOST = 'smtp.gmail.com'
-
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-
 EMAIL_PORT = 587
-
 EMAIL_USE_TLS = True
+
+
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
+
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Kolkata'

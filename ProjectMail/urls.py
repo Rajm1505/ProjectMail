@@ -20,6 +20,7 @@ from .views import index
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index),
+    path('mailbody', index),
     path('api/', include('api.urls')),
 
 ]
