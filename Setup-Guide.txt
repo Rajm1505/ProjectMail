@@ -1,0 +1,38 @@
+Setup 
+
+1. Install Python 3.10
+
+2. Install Redis Windows using Github repo 
+https://github.com/tporadowski/redis/releases
+
+3. Install NodeJS
+
+4. Setup .env file with following fields
+SECRET_KEY = 'key here'
+PORT = 'db port here'
+EMAIL_HOST_USER = 'emailID here'
+EMAIL_HOST_PASSWORD = 'email password here'
+
+5. Create empty DB in MySQL named 'ProjectMail'
+
+6. Install React libraries
+    npm i
+
+7. Install python packages
+    pip install -r requirements.txt
+
+8. Start Servers
+
+- Check if redis is working 
+    start redis-cli and ping
+
+- Start MySQL Server
+
+- Start Celery worker 
+    celery -A ProjectMail worker -l INFO
+
+- Start Django Server
+    python manage.py runserver
+
+- Start React Server
+    npm start
