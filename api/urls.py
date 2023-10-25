@@ -23,4 +23,7 @@ urlpatterns = [
     path('mailreplies/', views.allMailReplies),
     path('mailreplies/new', views.newMailReplies),
     path('mailbody/', views.mailBody),
+    path('importcsv/', views.importCSV),
+    path('getdept/', views.getDepartments),
+
 ]
