@@ -29,7 +29,7 @@ EMAIL_HOST_PASSWORD = 'email password here'
 - Start MySQL Server
 
 - Start Celery worker 
-    celery -A ProjectMail worker -l INFO
+    celery -A ProjectMail.celery worker --pool=solo -l INFO
 
 - Start Django Server
     python manage.py runserver

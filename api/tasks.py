@@ -6,7 +6,7 @@ from django.core.mail import send_mass_mail, send_mail
 @shared_task(bind = True)
 def sendMailWorker(self, subject, message, reciepentlist : list):
     print('worker started')
+    print("i am the raja\n\n\n\n")
     res = send_mail(subject, message,'automailclient0@gmail.com', reciepentlist,fail_silently = False)
     print("result from worker:" + str(res))
     return "Done"
-

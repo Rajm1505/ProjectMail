@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 
+import LogoutButton from "../Components/LogoutButton";
+
 import Form from "react-bootstrap/Form";
 import axios from "axios";
 
-const Home = () => {
+const SendMail = () => {
   const {
     register,
     handleSubmit,
@@ -14,8 +16,8 @@ const Home = () => {
     trigger,
   } = useForm();
 
-  const [sentStatus, setSentStatus] = useState("");
-  const [departments, setDepartments] = useState("");
+  const [sentStatus, setSentStatus] = useState(false);
+  const [departments, setDepartments] = useState([]);
 
   // const reciepents = () =>{
   //   axios
@@ -31,19 +33,32 @@ const Home = () => {
 
   // Api Call to  fetch all Departments available
   useEffect(() => {
-    async function fetchDept() {
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/api/getdept/");
-        console.log(response);
-        setDepartments(response.data.departments);
-      } catch (error) {
-        console.log(error);
+    if (localStorage.getItem("jwt") === null) {
+      window.location.replace("/login");
+    } else {
+      async function fetchDept() {
+        try {
+          const response = await axios.get(
+            "http://127.0.0.1:8000/api/getdept/"
+          );
+          console.log(response);
+          setDepartments(response.data.departments);
+        } catch (error) {
+          console.log(error);
+        }
       }
+      fetchDept();
     }
-    fetchDept();
   }, []);
 
+  if (localStorage.getItem("jwt") === null) {
+    return null;
+  }
+
   const sendMail = async (e) => {
+    if (departments.length == 0) {
+      return;
+    }
     const data = JSON.stringify(e);
     console.log("data", data);
     try {
@@ -58,6 +73,11 @@ const Home = () => {
       console.log(error.response);
     }
   };
+
+  const logout = () => {
+    localStorage.removeItem("jwt");
+    window.location.replace("login");
+  }
   return (
     <>
       <div className="container w-100 ">
@@ -67,28 +87,28 @@ const Home = () => {
           action=""
           method=""
         >
-          {/* if(sentStatus == true )
-          {
-
-            <h2>Mail has been sent Successfully</h2>
-          }
-          else{
-
-            <h2>Mails not sent!</h2>
-          }
-           */}
 
           <div className="d-flex ">
             <div className=" m-auto">
               <h1 className="text-light">Send mails with a Click!</h1>
-              <a className="btn btn-warning ms-0" href="mailreplies/">
+              <a className="btn btn-warning rounded-0 ms-0" href="../mailreplies/">
                 View Mail Replies
               </a>
+              <LogoutButton></LogoutButton>
             </div>
           </div>
-          <div className="row mt-5">
+
+          <div className="row mt-3">
+            {departments.length == 0 ? (
+              <p className="text-danger">
+                No Departments or Recipients Added. Please Contact Admin
+              </p>
+            ) : (
+              <></>
+              )}
             <div className="col-md-6 m-auto">
               <div className="card card-body ">
+              {sentStatus ? <span className="text-success">Mails has been sent Successfully</span> : <></>}
                 <div>
                   <label className="float-start" htmlFor="subject">
                     Subject:
@@ -126,7 +146,7 @@ const Home = () => {
                     <option>--Select--</option>
                   )}
                 </select>
-                <Button className="w-50 mt-3 m-auto bg-dark" type="submit">
+                <Button className="w-50 mt-3 m-auto bg-dark rounded-0" type="submit">
                   Send
                 </Button>
               </div>
@@ -138,4 +158,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default SendMail;
