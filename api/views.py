@@ -1,29 +1,34 @@
+# Python Libraries
+import easyimap as e
+import jwt
+import datetime
 import pandas as pd
-from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
 from decouple import config
 
-from .models import Departments, Recipients
-
-from rest_framework.response import Response
-from rest_framework.parsers import JSONParser, MultiPartParser
-from rest_framework.decorators import api_view, parser_classes
+# Django Imports
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mass_mail, send_mail
 
-import csv
+from .models import Departments, Recipients, User
+from ProjectMail.settings import SECRET_KEY
 
-import easyimap as e
+# Rest Framework Imports
+from rest_framework.response import Response
+from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.exceptions import AuthenticationFailed
 
+
+# Serializers
+from .serializers import UserSerializer
+
+# Celery Tasks
 from .tasks import sendMailWorker
-
-import datetime
 
 
 def index(request):
     return HttpResponse('Use Appropriate path')
-
-# Only Accepts JSONString as Input
 
 
 @api_view(['POST'])
@@ -51,7 +56,7 @@ def sendMail(request):
         # Getting reciepent's emails in a list
         reciepents = Recipients.objects.filter(did=dept)
         if reciepents:
-            reciepentlist = reciepentstolist(reciepents)
+            reciepentlist = reciepentsToList(reciepents)
             print('list', reciepentlist)
         else:
             print("Reciepents not found!")
@@ -62,6 +67,9 @@ def sendMail(request):
             return response
 
         # Sends mail through a celery worker
+        print(
+            f"Sending Data to worker subject: {subject} Message: {message} Reciepents List: ")
+        print(reciepentlist)
         sendMailWorker.delay(subject, message, reciepentlist)
 
         response.data = {
@@ -70,7 +78,7 @@ def sendMail(request):
         return response
 
 
-def reciepentstolist(reciepents):
+def reciepentsToList(reciepents):
     reciepentlist = []
     for rec in reciepents:
         reciepentlist.append(rec.email)
@@ -92,11 +100,12 @@ def newMailReplies(request):
             print("no mails")
             response.status_code = 404
             response.data = {
-                'message': 'No unseen mails Found'
+                'detail': 'No unseen mails Found'
             }
             return response
         print("Unseen Mails: ", unseen_mails)
 
+        # If mails found
         mails = {}
         counter = 1
         for i in range(0, len(unseen_mails)):
@@ -173,18 +182,25 @@ def allMailReplies(request):
         return response
 
 
+def filterMailBody(mail_body):
+    filtered_body = ""
+    for line in mail_body.split('\n'):
+        if not line.startswith(">"):
+            filtered_body += line + "\n"
+    return filtered_body
+
 @api_view(['POST'])
 def mailBody(request):
-    # mid = request.GET.get('mid')
     if request.method == 'POST':
         data = JSONParser().parse(request)
         id = data['id']
         mailserver = e.connect("imap.gmail.com", config(
-            "EMAIL_HOST_USER"), config("EMAIL_HOST_PASSWORD"))
-        email = mailserver.mail(id, include_raw=True)
-        print(email)
+            "EMAIL_HOST_USER"), config("EMAIL_HOST_PASSWORD"), "INBOX")
+        email = mailserver.mail(id, include_raw = True)
+        filtered_body = filterMailBody(email.body)
+
+        print(filtered_body)
         response = Response()
-        print((email.body).split('\n')[0])
 
         if email:
             response.status_code = 200
@@ -192,7 +208,7 @@ def mailBody(request):
                 'date': email.date,
                 'title': email.title,
                 'from_addr': email.from_addr,
-                'body': email.body
+                'body': filtered_body
             }
             return response
         else:
@@ -204,8 +220,6 @@ def mailBody(request):
 
 
 # Function to add Reciepents using CSV file
-
-
 @api_view(['POST'])
 @parser_classes([MultiPartParser])
 def importCSV(request):
@@ -214,7 +228,7 @@ def importCSV(request):
     df = pd.read_csv(csvFile, sep=';')
 
     newRecipients = []
-    duplicateRecipents = [] #To store all existing emails 
+    duplicateRecipents = []  # To store all existing emails
     for index, row in df.iterrows():
         # Checks if Department is already added
         dept = Departments.objects.filter(name=row['department']).first()
@@ -234,7 +248,7 @@ def importCSV(request):
 
     response = Response()
     response.data = {
-        "msg": "File uploaded successfully!",
+        "detail": "File uploaded successfully!",
         "duplicateEmails": duplicateRecipents
     }
     return response
@@ -254,3 +268,49 @@ def getDepartments(request):
         "departments":  deptNames
     }
     return response
+
+
+@api_view(['POST'])
+def register(request):
+    data = JSONParser().parse(request)
+
+    userSerializer = UserSerializer(data=data)
+    userSerializer.is_valid(raise_exception=True)
+    userSerializer.save()
+
+    response = Response()
+    response.data = userSerializer.data
+    response.data["detail"] = "Registered Successfully"
+
+    return response
+
+
+@api_view(['POST'])
+def login(request):
+    data = JSONParser().parse(request)
+    email = data.get('email')
+    password = data.get('password')
+
+    user = User.objects.filter(email=email).first()
+    if not user:
+        raise AuthenticationFailed("User not found")
+
+    if not user.check_password(raw_password=password):
+        raise AuthenticationFailed("Invalid Password")
+
+    token = generateJWTToken(user.uid)
+    response = Response()
+    response.data = {
+        'jwt': token
+    }
+
+    return response
+
+
+def generateJWTToken(uid):
+    payload = {
+        'uid': uid,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
+        'iat': datetime.datetime.utcnow()
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')

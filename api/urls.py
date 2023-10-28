@@ -25,5 +25,10 @@ urlpatterns = [
     path('mailbody/', views.mailBody),
     path('importcsv/', views.importCSV),
     path('getdept/', views.getDepartments),
+    #Auth Endpoints
+
+    path('register/', views.register),
+    path('login/', views.login),
+
 
 ]
